@@ -1,6 +1,7 @@
 package com.thepurryness.slimify;
 
 import android.app.Activity;
+import android.content.Intent;
 import android.content.IntentSender;
 import android.media.MediaPlayer;
 import android.net.Uri;
@@ -9,6 +10,7 @@ import android.util.EventLogTags;
 import android.util.Log;
 import android.view.Menu;
 import android.view.MenuItem;
+import android.view.View;
 import android.widget.VideoView;
 
 import com.google.android.gms.common.ConnectionResult;
@@ -27,6 +29,7 @@ public class MainActivity extends Activity {
      */
     private static final int REQUEST_OAUTH = 1;
     private static final String AUTH_PENDING = "auth_state_pending";
+    private final MainActivity TAG = this;
     private boolean authInProgress = false;
     private GoogleApiClient mClient = null;
 
@@ -58,6 +61,20 @@ public class MainActivity extends Activity {
 
     }
 
+
+    public void onSignIn(View view) {
+        // Connect to the Fitness API
+        Log.i(String.valueOf(TAG), "Connecting...");
+        mClient.connect();
+
+    }
+
+    public void proceedMainPage() {
+        Intent intent = new Intent(this, UserDetailsActivity.class);
+        startActivity(intent);
+    }
+
+
     private void buildFitnessClient() {
         /**
          *  Build a {@link GoogleApiClient} that will authenticate the user and allow the application
@@ -82,6 +99,7 @@ public class MainActivity extends Activity {
                                 Log.i(String.valueOf(TAG), "Connected!!!");
                                 // Now you can make calls to the Fitness APIs.
                                 // Put application specific code here.
+                                proceedMainPage();
                             }
 
                             @Override
@@ -130,8 +148,42 @@ public class MainActivity extends Activity {
                 .build();
     }
 
+    //Manage the connection lifecycle of your client inside your activity
+    @Override
+    protected void onStart() {
+        super.onStart();
+    }
 
-    //SIGN IN
+    @Override
+    protected void onStop() {
+        super.onStop();
+        if (mClient.isConnected()) {
+            mClient.disconnect();
+        }
+    }
+
+    @Override
+    protected void onActivityResult(int requestCode, int resultCode, Intent data) {
+        if (requestCode == REQUEST_OAUTH) {
+            authInProgress = false;
+            if (resultCode == RESULT_OK) {
+                // Make sure the app is not already connected or attempting to connect
+                if (!mClient.isConnecting() && !mClient.isConnected()) {
+                    mClient.connect();
+                }
+            }
+        }
+    }
+
+    @Override
+    protected void onSaveInstanceState(Bundle outState) {
+        super.onSaveInstanceState(outState);
+        outState.putBoolean(AUTH_PENDING, authInProgress);
+    }
+
+
+
+    //SIGN IN BUTTON
     @Override
     public boolean onCreateOptionsMenu(Menu menu) {
         // Inflate the menu; this adds items to the action bar if it is present.
